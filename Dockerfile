@@ -8,13 +8,13 @@ LABEL org.opencontainers.image.base.name="docker.io/library/node:22.21-trixie" \
   org.opencontainers.image.title="csvm" \
   org.opencontainers.image.description="CSVM (CncfStack Virtal Machine) is a container image like vm"
 
-
 USER root
 
-COPY clean-install /usr/local/bin/clean-install
 COPY entrypoint /usr/local/bin/entrypoint
+COPY tools/clean-install /usr/local/bin/clean-install
+COPY kernel/10-network-security.conf /etc/sysctl.d/10-network-security.conf
+COPY kernel/11-tcp-mtu-probing.conf /etc/sysctl.d/11-tcp-mtu-probing.conf
 
-# 安装软件包奥
 RUN echo "Ensuring scripts are executable ..." \
     && chmod +x /usr/local/bin/clean-install /usr/local/bin/entrypoint \
  && echo "Installing Packages ..." \
