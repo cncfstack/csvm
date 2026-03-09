@@ -36,14 +36,14 @@ RUN curl -fsSL https://bun.sh/install | bash
 RUN corepack enable
 
 # Install playwright
-RUN DEBIAN_FRONTEND=noninteractive clean-install  xvfb && \
-    mkdir -p /home/node/.cache/ms-playwright && \
-    PLAYWRIGHT_BROWSERS_PATH=/home/node/.cache/ms-playwright \
-    node /app/node_modules/playwright-core/cli.js install --with-deps chromium && \
-    chown -R node:node /home/node/.cache/ms-playwright
+# RUN DEBIAN_FRONTEND=noninteractive clean-install  xvfb && \
+#     mkdir -p /home/node/.cache/ms-playwright && \
+#     PLAYWRIGHT_BROWSERS_PATH=/home/node/.cache/ms-playwright \
+#     node /app/node_modules/playwright-core/cli.js install --with-deps chromium && \
+#     chown -R node:node /home/node/.cache/ms-playwright
 #Xvfb :1 -screen 0 1280x800x24 -ac -nolisten tcp &
 
 # Install chromium
-RUN  clean-install  chromium websockify  x11vnc novnc
+RUN  DEBIAN_FRONTEND=noninteractive clean-install  chromium websockify  x11vnc novnc
         
 ENV PATH="/root/.bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
