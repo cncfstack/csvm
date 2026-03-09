@@ -1,5 +1,5 @@
 #  debian:bookworm-slim
-FROM registry.cncfstack.com/docker.io/kicbase/stable:v0.0.48
+FROM docker.io/kicbase/stable:v0.0.50
 
 # Install Node.js
 RUN curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - 
