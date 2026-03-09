@@ -10,17 +10,6 @@ RUN clean-install nodejs \
     && npm --version
 ENV NODE_ENV=production
 
-# Install playwright
-RUN  clean-install  xvfb && \
-    mkdir -p /home/node/.cache/ms-playwright && \
-    PLAYWRIGHT_BROWSERS_PATH=/home/node/.cache/ms-playwright \
-    node /app/node_modules/playwright-core/cli.js install --with-deps chromium && \
-    chown -R node:node /home/node/.cache/ms-playwright
-#Xvfb :1 -screen 0 1280x800x24 -ac -nolisten tcp &
-
-# Install chromium
-RUN  clean-install  chromium websockify  x11vnc novnc
-        
 RUN echo "Ensuring scripts are executable ..." \
     && chmod +x /usr/local/bin/clean-install /usr/local/bin/entrypoint \
  && echo "Installing Packages ..." \
@@ -44,7 +33,17 @@ RUN echo "Ensuring scripts are executable ..." \
 # Install Bun (required for build scripts)
 #RUN GITHUB='https://gh-proxy.com/https://github.com' curl -fsSL https://bun.sh/install | bash
 RUN curl -fsSL https://bun.sh/install | bash
-ENV PATH="/root/.bun/bin:${PATH}"
 RUN corepack enable
 
-ENV PATH="/root/.bun/bin:/root/.bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+# Install playwright
+RUN DEBIAN_FRONTEND=noninteractive clean-install  xvfb && \
+    mkdir -p /home/node/.cache/ms-playwright && \
+    PLAYWRIGHT_BROWSERS_PATH=/home/node/.cache/ms-playwright \
+    node /app/node_modules/playwright-core/cli.js install --with-deps chromium && \
+    chown -R node:node /home/node/.cache/ms-playwright
+#Xvfb :1 -screen 0 1280x800x24 -ac -nolisten tcp &
+
+# Install chromium
+RUN  clean-install  chromium websockify  x11vnc novnc
+        
+ENV PATH="/root/.bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
