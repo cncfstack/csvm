@@ -1,8 +1,8 @@
 #  debian:bookworm-slim
 FROM registry.cncfstack.com/docker.io/kicbase/stable:v0.0.48
 
-RUN groupadd --gid 1000 node \
-  && useradd --uid 1000 --gid node --shell /bin/bash --create-home node
+RUN groupadd  node \
+  && useradd  --gid node --shell /bin/bash --create-home node
 
 ENV NODE_VERSION=22.22.1
 
