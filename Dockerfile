@@ -43,7 +43,7 @@ RUN echo "Ensuring scripts are executable ..." \
       iputils-ping netcat-openbsd  \
       openssl  wget telnet  gnupg hostname lsb-release   build-essential \
       net-tools \
-      openssh  openssh-server tmux \
+      openssh-server tmux \
       vim nano file unzip  less tree \
       procps iotop iftop sysstat  htop gdb strace nmap  tcpdump traceroute dnsutils lsof \
       git git-lfs \
