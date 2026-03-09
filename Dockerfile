@@ -10,10 +10,26 @@ LABEL org.opencontainers.image.base.name="docker.io/library/node:22.21-trixie" \
 
 USER root
 
-COPY entrypoint /usr/local/bin/entrypoint
-COPY tools/clean-install /usr/local/bin/clean-install
+ARG BUILDKIT_VERSION="v0.26.3"
+ARG CRIO_VERSION="v1.35"
+ARG CRICTL_VERSION="v1.35.0"
+ARG CRI_DOCKERD_VERSION="v0.4.1"
+ARG CRI_DOCKERD_COMMIT="55d6e1a1d6f2ee58949e13a0c66afe7d779ac942"
+ARG CNI_PLUGINS_VERSION="v1.9.0"
+ARG TARGETARCH
+ARG NERDCTL_VERSION="2.2.1"
+ARG NERDCTLD_VERSION="0.7.0"
+
+# copy in static files (configs, scripts)
 COPY kernel/10-network-security.conf /etc/sysctl.d/10-network-security.conf
 COPY kernel/11-tcp-mtu-probing.conf /etc/sysctl.d/11-tcp-mtu-probing.conf
+COPY crio/02-crio.conf /etc/crio/crio.conf.d/02-crio.conf
+COPY containerd/containerd.toml /etc/containerd/config.toml
+COPY containerd/containerd_docker_io_hosts.toml /etc/containerd/certs.d/docker.io/hosts.toml
+COPY tools/clean-install /usr/local/bin/clean-install
+COPY tools/entrypoint /usr/local/bin/entrypoint
+COPY nerdctld/nerdctl.socket /usr/local/lib/systemd/system/nerdctl.socket
+COPY nerdctld/nerdctl.service /usr/local/lib/systemd/system/nerdctl.service
 
 RUN echo "Ensuring scripts are executable ..." \
     && chmod +x /usr/local/bin/clean-install /usr/local/bin/entrypoint \
@@ -24,7 +40,16 @@ RUN echo "Ensuring scripts are executable ..." \
       libseccomp2 pigz \
       bash ca-certificates curl rsync \
       nfs-common \
-      iputils-ping netcat-openbsd vim-tiny \
+      iputils-ping netcat-openbsd  \
+      openssl  wget telnet  gnupg hostname lsb-release   build-essential \
+      net-tools \
+      openssh  openssh-server tmux \
+      vim nano file unzip  less tree \
+      procps iotop iftop sysstat  htop gdb strace nmap  tcpdump traceroute dnsutils lsof \
+      git git-lfs \
+      jq python3 \
+      lz4 \
+      sudo \
     && find /lib/systemd/system/sysinit.target.wants/ -name "systemd-tmpfiles-setup.service" -delete \
     && rm -f /lib/systemd/system/multi-user.target.wants/* \
     && rm -f /etc/systemd/system/*.wants/* \
@@ -33,7 +58,9 @@ RUN echo "Ensuring scripts are executable ..." \
     && rm -f /lib/systemd/system/sockets.target.wants/*initctl* \
     && rm -f /lib/systemd/system/basic.target.wants/* \
     && echo "ReadKMsg=no" >> /etc/systemd/journald.conf \
-    && ln -s /usr/lib/systemd/systemd /sbin/init \
+    && ln -s "$(which systemd)" /sbin/init \
+ && echo "Ensuring /etc/kubernetes/manifests" \
+    && mkdir -p /etc/kubernetes/manifests \
  && echo "Adjusting systemd-tmpfiles timer" \
     && sed -i /usr/lib/systemd/system/systemd-tmpfiles-clean.timer -e 's#OnBootSec=.*#OnBootSec=1min#' \
  && echo "Disabling udev" \
@@ -42,6 +69,163 @@ RUN echo "Ensuring scripts are executable ..." \
     && systemctl mask systemd-binfmt.service \
  && echo "Modifying /etc/nsswitch.conf to prefer hosts" \
     && sed -i /etc/nsswitch.conf -re 's#^(hosts:\s*).*#\1dns files#'
+
+
+
+# Add support for rsa1 in sshd
+# modern debian-based OSs dont support rsa1 by default, so we need to enable it to support older ssh clients
+# TODO: remove after https://github.com/kubernetes/minikube/issues/21543 is solved
+RUN cat <<EOF >> /etc/ssh/sshd_config
+PubkeyAcceptedAlgorithms +ssh-rsa
+HostkeyAlgorithms +ssh-rsa
+PubkeyAuthentication yes
+PasswordAuthentication no
+EOF
+
+# Install nerdctl and nerdctld
+RUN export ARCH=$(dpkg --print-architecture | sed 's/ppc64el/ppc64le/') && \
+    echo "Installing nerdctl and nerdctld ..." &&\
+    addgroup --system nerdctl &&\
+    mkdir -p /etc/systemd/system/nerdctl.socket.d && \
+    printf "[Socket]\nSocketMode=0660\nSocketGroup=nerdctl\n" \
+           > /etc/systemd/system/nerdctl.socket.d/override.conf && \
+    mkdir -p /etc/systemd/system/nerdctl.service.d && \
+    printf "[Service]\nEnvironment=CONTAINERD_NAMESPACE=k8s.io\n" \
+           > /etc/systemd/system/nerdctl.service.d/override.conf && \
+    curl -L --retry 5 --output /tmp/nerdctl.tgz "https://github.com/containerd/nerdctl/releases/download/v${NERDCTL_VERSION}/nerdctl-${NERDCTL_VERSION}-linux-$ARCH.tar.gz" &&\
+    tar -C /usr/local/bin -xzvf /tmp/nerdctl.tgz &&\
+    curl -L --retry 5 --output /tmp/nerdctld.tgz "https://github.com/afbjorklund/nerdctld/releases/download/v${NERDCTLD_VERSION}/nerdctld-${NERDCTLD_VERSION}-linux-$ARCH.tar.gz" &&\
+    tar -C /usr/local/bin -xzvf /tmp/nerdctld.tgz &&\
+    chmod 755 /usr/local/bin/nerdctl &&\
+    chmod 755 /usr/local/bin/nerdctld
+
+# install docker
+## ref: https://docs.docker.com/engine/install/debian/#install-using-the-repository
+RUN install -m 0755 -d /etc/apt/keyrings \
+    && curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc \
+    && chmod a+r /etc/apt/keyrings/docker.asc \
+    && echo \
+    "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian \
+    $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+    tee /etc/apt/sources.list.d/docker.list > /dev/null \
+    && clean-install docker-ce docker-ce-cli containerd.io docker-buildx-plugin
+
+# Set ulimit for containerd to match docker's default-ulimit setting
+# This ensures consistent file descriptor limits (1048576) across container runtimes
+RUN sed -i '/^\[Service\]/a LimitNOFILE=1048576' /lib/systemd/system/containerd.service
+
+# install buildkit
+RUN export ARCH=$(dpkg --print-architecture | sed 's/ppc64el/ppc64le/') \
+ && echo "Installing buildkit ..." \
+    && addgroup --system buildkit \
+    && export BUILDKIT_BASE_URL="https://github.com/moby/buildkit/releases/download/${BUILDKIT_VERSION}" \
+    && curl -sSL --retry 5 --output /tmp/buildkit.tgz "${BUILDKIT_BASE_URL}/buildkit-${BUILDKIT_VERSION}.linux-${ARCH}.tar.gz" \
+    && tar -C /usr/local -xzvf /tmp/buildkit.tgz \
+    && rm -rf /tmp/buildkit.tgz \
+    && mkdir -p /usr/local/lib/systemd/system \
+    && curl -L --retry 5 --output /usr/local/lib/systemd/system/buildkit.service "https://raw.githubusercontent.com/moby/buildkit/${BUILDKIT_VERSION}/examples/systemd/system/buildkit.service" \
+    && curl -L --retry 5 --output /usr/local/lib/systemd/system/buildkit.socket "https://raw.githubusercontent.com/moby/buildkit/${BUILDKIT_VERSION}/examples/systemd/system/buildkit.socket" \
+    && mkdir -p /etc/buildkit \
+    && echo "[worker.oci]\n  enabled = false\n[worker.containerd]\n  enabled = true\n  namespace = \"k8s.io\"" > /etc/buildkit/buildkitd.toml \
+    && chmod 755 /usr/local/bin/buildctl \
+    && chmod 755 /usr/local/bin/buildkit-runc \
+    && chmod 755 /usr/local/bin/buildkit-qemu-* \
+    && chmod 755 /usr/local/bin/buildkitd \
+    && systemctl enable buildkit.socket
+
+# install podman
+RUN clean-install podman catatonit crun && \
+    addgroup --system podman && \
+    mkdir -p /etc/systemd/system/podman.socket.d && \
+    printf "[Socket]\nSocketMode=0660\nSocketUser=root\nSocketGroup=podman\n" \
+           > /etc/systemd/system/podman.socket.d/override.conf && \
+    mkdir -p /etc/tmpfiles.d && \
+    echo "d /run/podman 0770 root podman" > /etc/tmpfiles.d/podman.conf && \
+    systemd-tmpfiles --create
+
+ # install crictl
+RUN export ARCH=$(dpkg --print-architecture) && \
+    case "$ARCH" in \
+      amd64) CRICTL_ARCH="amd64" ;; \
+      arm64) CRICTL_ARCH="arm64" ;; \
+      ppc64el) CRICTL_ARCH="ppc64le" ;; \
+      s390x) CRICTL_ARCH="s390x" ;; \
+      *) echo "Unsupported architecture for crictl: $ARCH" && exit 1 ;; \
+    esac && \
+    curl -fsSL --retry 5 --output /tmp/crictl.tgz "https://github.com/kubernetes-sigs/cri-tools/releases/download/${CRICTL_VERSION}/crictl-${CRICTL_VERSION}-linux-${CRICTL_ARCH}.tar.gz" && \
+    tar -C /usr/local/bin -xzvf /tmp/crictl.tgz && \
+    rm -f /tmp/crictl.tgz && \
+    chmod +x /usr/local/bin/crictl && \
+    if [ -f /usr/local/bin/critest ]; then chmod +x /usr/local/bin/critest; fi
+# install containernetworking-plugins
+RUN export ARCH=$(dpkg --print-architecture | sed 's/ppc64el/ppc64le/') && \
+    curl -LO "https://github.com/containernetworking/plugins/releases/download/${CNI_PLUGINS_VERSION}/cni-plugins-linux-$ARCH-${CNI_PLUGINS_VERSION}.tgz" && \
+    mkdir -p /opt/cni/bin && \
+    tar -xf "cni-plugins-linux-$ARCH-${CNI_PLUGINS_VERSION}.tgz" -C /opt/cni/bin && \
+    rm "cni-plugins-linux-$ARCH-${CNI_PLUGINS_VERSION}.tgz"
+
+# install cri-o from the OBS repositories
+RUN export ARCH=$(dpkg --print-architecture | sed 's/ppc64el/ppc64le/') && \
+    if [ "$ARCH" != "ppc64le" ]; then \
+        mkdir -p /etc/apt/sources.list.d /etc/apt/trusted.gpg.d && \
+        echo 'deb http://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/Debian_12/ /' \
+            > /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list && \
+        curl -fsSL https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/Debian_12/Release.key \
+            | gpg --dearmor --yes -o /etc/apt/trusted.gpg.d/devel_kubic_libcontainers_stable.gpg && \
+        echo "deb http://download.opensuse.org/repositories/isv:/cri-o:/stable:/${CRIO_VERSION}:/build/deb/ /" \
+            > "/etc/apt/sources.list.d/isv:cri-o:stable:${CRIO_VERSION}:build.list" && \
+        curl -fsSL "https://download.opensuse.org/repositories/isv:cri-o:stable:${CRIO_VERSION}:build/deb/Release.key" \
+            | gpg --dearmor --yes -o "/etc/apt/trusted.gpg.d/isv_cri-o_stable_${CRIO_VERSION}_build.gpg" && \
+        clean-install cri-o; \
+    fi
+
+# install NVIDIA container toolkit
+RUN export ARCH=$(dpkg --print-architecture) && \
+    if [ "$ARCH" = 'amd64' ] || [ "$ARCH" = 'arm64' ] || [ "$ARCH" = 'ppc64el' ]; then \
+    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg && \
+    curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+    sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+    sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list && \
+    clean-install nvidia-container-toolkit; fi
+
+
+# disable non-docker runtimes by default (since cri-dockerd is default in minikube)
+RUN systemctl disable containerd
+# disable crio for archs that support it
+RUN export ARCH=$(dpkg --print-architecture | sed 's/ppc64el/ppc64le/') && \
+    if [ "$ARCH" != "ppc64le" ]; then systemctl disable crio && rm -f /etc/crictl.yaml; fi
+# enable podman socket on archs that support it
+RUN export ARCH=$(dpkg --print-architecture | sed 's/ppc64el/ppc64le/') && if [ "$ARCH" != "ppc64le" ]; then systemctl enable podman.socket; fi
+# enable docker which is default
+RUN systemctl enable docker.service
+# minikube relies on /etc/hosts for control-plane discovery. This prevents nefarious DNS servers from breaking it.
+RUN sed -ri 's/dns files/files dns/g' /etc/nsswitch.conf
+
+EXPOSE 22
+# create docker user for minikube ssh. to match VM using "docker" as username
+# Ensure 'docker' group exists; create a 'docker' user with a shell
+## ref: https://docs.docker.com/engine/install/linux-postinstall/
+RUN groupadd -f docker \
+    && useradd -m -s /bin/bash -g docker -G sudo docker
+# Ensure the account is usable for key-only SSH - unlock the account, and disable password
+RUN usermod -p '*' docker && passwd -u docker && passwd -d docker
+RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/20-passwordless-sudo \
+    && chmod 0440 /etc/sudoers.d/20-passwordless-sudo
+RUN export ARCH=$(dpkg --print-architecture | sed 's/ppc64el/ppc64le/') && if [ "$ARCH" != "ppc64le" ]; then adduser docker podman; fi
+RUN adduser docker nerdctl
+RUN adduser docker buildkit
+USER docker
+RUN mkdir /home/docker/.ssh
+USER root
+# kind base-image entry-point expects a "kind" folder for product_name,product_uuid
+# https://github.com/kubernetes-sigs/kind/blob/master/images/base/files/usr/local/bin/entrypoint
+RUN mkdir -p /kind
+# Deleting leftovers
+RUN rm -rf \
+  /usr/share/doc/* \
+  /usr/share/man/* \
+  /usr/share/local/*
+RUN echo "kic! Build: ${COMMIT_SHA} Time :$(date)" > "/kic.txt"
 
 # tell systemd that it is in docker (it will check for the container env)
 # https://systemd.io/CONTAINER_INTERFACE/
