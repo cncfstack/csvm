@@ -7,7 +7,10 @@ RUN clean-install nodejs \
     && groupadd  node \
     && useradd  --gid node --shell /bin/bash --create-home node \
     && node --version \
-    && npm --version
+    && npm --version \
+    && rm -f /usr/share/keyrings/nodesource.gpg \
+    && rm -f /etc/apt/sources.list.d/nodesource.list \
+    && rm -f /etc/apt/sources.list.d/nodesource.sources
 ENV NODE_ENV=production
 
 RUN echo "Ensuring scripts are executable ..." \
