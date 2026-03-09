@@ -13,32 +13,33 @@ RUN clean-install nodejs \
     && rm -f /etc/apt/sources.list.d/nodesource.sources
 ENV NODE_ENV=production
 
-RUN echo "Ensuring scripts are executable ..." \
-    && chmod +x /usr/local/bin/clean-install /usr/local/bin/entrypoint \
- && echo "Installing Packages ..." \
-    && DEBIAN_FRONTEND=noninteractive clean-install \
-      systemd dbus \
-      conntrack iptables iproute2 ethtool socat util-linux mount ebtables udev kmod \
-      libseccomp2 pigz \
-      bash ca-certificates curl rsync \
-      nfs-common \
-      iputils-ping netcat-openbsd  \
-      openssl  wget telnet  gnupg hostname lsb-release   build-essential \
-      net-tools \
-      openssh-server tmux \
-      vim nano file unzip  less tree \
-      procps iotop iftop sysstat  htop gdb strace nmap  tcpdump traceroute dnsutils lsof \
-      git git-lfs \
-      jq python3 \
-      lz4 \
-      sudo
 
-# Install Bun (required for build scripts)
-#RUN GITHUB='https://gh-proxy.com/https://github.com' curl -fsSL https://bun.sh/install | bash
-RUN curl -fsSL https://bun.sh/install | bash
-RUN corepack enable
+# RUN echo "Ensuring scripts are executable ..." \
+#     && chmod +x /usr/local/bin/clean-install /usr/local/bin/entrypoint \
+#  && echo "Installing Packages ..." \
+#     && DEBIAN_FRONTEND=noninteractive clean-install \
+#       systemd dbus \
+#       conntrack iptables iproute2 ethtool socat util-linux mount ebtables udev kmod \
+#       libseccomp2 pigz \
+#       bash ca-certificates curl rsync \
+#       nfs-common \
+#       iputils-ping netcat-openbsd  \
+#       openssl  wget telnet  gnupg hostname lsb-release   build-essential \
+#       net-tools \
+#       openssh-server tmux \
+#       vim nano file unzip  less tree \
+#       procps iotop iftop sysstat  htop gdb strace nmap  tcpdump traceroute dnsutils lsof \
+#       git git-lfs \
+#       jq python3 \
+#       lz4 \
+#       sudo
 
-# Install chromium
-RUN  DEBIAN_FRONTEND=noninteractive clean-install  chromium websockify  x11vnc novnc
+# # Install Bun (required for build scripts)
+# #RUN GITHUB='https://gh-proxy.com/https://github.com' curl -fsSL https://bun.sh/install | bash
+# RUN curl -fsSL https://bun.sh/install | bash
+# RUN corepack enable
 
-ENV PATH="/root/.bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+# # Install chromium
+# RUN  DEBIAN_FRONTEND=noninteractive clean-install  chromium websockify  x11vnc novnc
+
+# ENV PATH="/root/.bun/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
