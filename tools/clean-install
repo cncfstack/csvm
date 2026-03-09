@@ -7,20 +7,20 @@ if [ $# = 0 ]; then
   exit 1
 fi
 
-# cat > /etc/apt/sources.list.d/debian.sources <<'EOF'
-# Types: deb
-# URIs: http://mirrors.tuna.tsinghua.edu.cn/debian
-# Suites: trixie trixie-updates trixie-backports
-# Components: main contrib non-free non-free-firmware
-# Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+cat > /etc/apt/sources.list.d/debian.sources <<'EOF'
+Types: deb
+URIs: http://mirrors.tuna.tsinghua.edu.cn/debian
+Suites: trixie trixie-updates trixie-backports
+Components: main contrib non-free non-free-firmware
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 
-# # 以下安全更新软件源包含了官方源与镜像站配置，如有需要可自行修改注释切换
-# Types: deb
-# URIs: http://mirrors.tuna.tsinghua.edu.cn/debian-security
-# Suites: trixie-security
-# Components: main contrib non-free non-free-firmware
-# Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
-# EOF
+# 以下安全更新软件源包含了官方源与镜像站配置，如有需要可自行修改注释切换
+Types: deb
+URIs: http://mirrors.tuna.tsinghua.edu.cn/debian-security
+Suites: trixie-security
+Components: main contrib non-free non-free-firmware
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+EOF
 
 
 apt-get update

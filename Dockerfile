@@ -58,7 +58,7 @@ RUN echo "Ensuring scripts are executable ..." \
     && rm -f /lib/systemd/system/sockets.target.wants/*initctl* \
     && rm -f /lib/systemd/system/basic.target.wants/* \
     && echo "ReadKMsg=no" >> /etc/systemd/journald.conf \
-    && ln -s "$(which systemd)" /sbin/init \
+    && ln -s /usr/lib/systemd/systemd /sbin/init \
  && echo "Ensuring /etc/kubernetes/manifests" \
     && mkdir -p /etc/kubernetes/manifests \
  && echo "Adjusting systemd-tmpfiles timer" \
