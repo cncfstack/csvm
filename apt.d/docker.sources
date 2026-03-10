@@ -1,0 +1,5 @@
+Types: deb
+URIs: https://mirrors.tuna.tsinghua.edu.cn/docker-ce/linux/debian
+Suites: bookworm
+Components: stable
+Signed-By: /etc/apt/keyrings/docker.gpg

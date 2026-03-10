@@ -1,0 +1,26 @@
+#!/bin/bash
+
+set -o errexit
+set -o nounset
+set -o pipefail
+set -x
+
+source /scripts/tools.sh
+source /scripts/validate_userns.sh
+source /scripts/fix_mount.sh
+source /scripts/fix_cgroup.sh
+source /scripts/fix_machine_id.sh
+source /scripts/select_iptables.sh
+#source /scripts/enable_network_magic.sh
+
+validate_userns
+fix_mount
+retryable_fix_cgroup
+fix_machine_id
+select_iptables
+#enable_network_magic
+
+echo "entrypoint completed: $(uname -a)"
+
+# we want the command (expected to be systemd) to be PID1, so exec to it
+exec "$@"
