@@ -19,3 +19,4 @@ rm -rf \
    /usr/share/doc/* \
    /usr/share/man/* \
    /usr/share/local/*
+rm -f /var/lib/dpkg/statoverride
