@@ -20,17 +20,18 @@ COPY tools/entrypoint /usr/local/bin/entrypoint
 COPY scripts/ /scripts
 COPY apt.d/debian.sources /etc/apt/sources.list.d/debian.sources
 
-RUN echo "Ensuring scripts are executable ..." \
-    && chmod +x /usr/local/bin/clean-install /usr/local/bin/entrypoint \
- && echo "Installing Packages ..." \
+# 同时安装大量软件包，会导致Github Action OOM，以及单个镜像层较大，分批安装
+RUN chmod +x /usr/local/bin/clean-install /usr/local/bin/entrypoint \
     && DEBIAN_FRONTEND=noninteractive clean-install \
       systemd dbus mount udev kmod conntrack iptables iproute2 ethtool libseccomp2 \
       bash ca-certificates curl openssl  wget telnet  gnupg hostname lsb-release  sudo \
       build-essential util-linux \
+
+RUN DEBIAN_FRONTEND=noninteractive clean-install \
       vim nano file unzip  less lz4 \
       dnsutils lsof net-tools iputils-ping \
       openssh-server git python3  jq cron \
-    && find /lib/systemd/system/sysinit.target.wants/ -name "systemd-tmpfiles-setup.service" -delete \
+  && find /lib/systemd/system/sysinit.target.wants/ -name "systemd-tmpfiles-setup.service" -delete \
     && rm -f /lib/systemd/system/multi-user.target.wants/* \
     && rm -f /etc/systemd/system/*.wants/* \
     && rm -f /lib/systemd/system/local-fs.target.wants/* \
@@ -48,18 +49,15 @@ RUN echo "Ensuring scripts are executable ..." \
  && echo "Modifying /etc/nsswitch.conf to prefer hosts" \
     && sed -i /etc/nsswitch.conf -re 's#^(hosts:\s*).*#\1dns files#' \
  && echo "enable services" \
-    && systemctl enable cron \
-    && systemctl enable ssh 
+    && systemctl enable cron
 
 # Install Docker
 COPY apt.d/docker.sources /etc/apt/sources.list.d/docker.sources
 RUN curl -fsSL https://mirrors.aliyun.com/docker-ce/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg \
    && chmod a+r /etc/apt/keyrings/docker.gpg \
    && clean-install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin \
-   && systemctl enable docker.service
-
-
-EXPOSE 22
+   && systemctl enable docker.service \
+   && rm -f /etc/apt/sources.list.d/docker.sources 
 
 # Deleting leftovers
 RUN rm -rf \

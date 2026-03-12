@@ -18,5 +18,5 @@ rm -rf \
    /var/tmp/* \
    /usr/share/doc/* \
    /usr/share/man/* \
-   /usr/share/local/*
-rm -f /var/lib/dpkg/statoverride
+   /usr/share/local/* \
+   /var/lib/dpkg/statoverride
