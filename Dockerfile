@@ -25,7 +25,7 @@ RUN chmod +x /usr/local/bin/clean-install /usr/local/bin/entrypoint \
     && DEBIAN_FRONTEND=noninteractive clean-install \
       systemd dbus mount udev kmod conntrack iptables iproute2 ethtool libseccomp2 \
       bash ca-certificates curl openssl  wget telnet  gnupg hostname lsb-release  sudo \
-      build-essential util-linux \
+      build-essential util-linux
 
 RUN DEBIAN_FRONTEND=noninteractive clean-install \
       vim nano file unzip  less lz4 \
