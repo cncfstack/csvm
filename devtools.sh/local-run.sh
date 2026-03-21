@@ -11,6 +11,6 @@ docker run -itd \
   -v /lib/modules:/lib/modules:ro \
   -v csvm-storage:/var \
   --pull always \
-  registry.cncfstack.com/cncfstack/csvm:v0.1.2-bookworm
+  registry.cncfstack.com/cncfstack/csvm:v0.1.3-bookworm
 sleep 3
 docker logs  csvm
