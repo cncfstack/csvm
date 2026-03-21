@@ -47,9 +47,7 @@ RUN DEBIAN_FRONTEND=noninteractive clean-install \
  && echo "Masking systemd-binfmt to prevent host config corruption (covers all formats: python, qemu, rosetta, etc) - issue #17700" \
     && systemctl mask systemd-binfmt.service \
  && echo "Modifying /etc/nsswitch.conf to prefer hosts" \
-    && sed -i /etc/nsswitch.conf -re 's#^(hosts:\s*).*#\1dns files#' \
- && echo "enable services" \
-    && systemctl enable cron
+    && sed -i /etc/nsswitch.conf -re 's#^(hosts:\s*).*#\1dns files#'
 
 # Install Docker
 COPY apt.d/docker.sources /etc/apt/sources.list.d/docker.sources
