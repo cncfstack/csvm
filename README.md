@@ -17,8 +17,7 @@ docker run -itd \
   --privileged \
   -v /lib/modules:/lib/modules:ro \
   -v csvm-storage:/var \
-  -p 10022:22 \
-  registry.cncfstack.com/cncfstack/csvm:v0.1.3-bookworm
+  registry.cncfstack.com/cncfstack/csvm:v0.2.0-bookworm
 ```
 
 启动成功后，可以通过如下命令进入容器
