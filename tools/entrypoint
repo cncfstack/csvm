@@ -12,6 +12,7 @@ source /scripts/fix_cgroup.sh
 source /scripts/fix_machine_id.sh
 source /scripts/select_iptables.sh
 #source /scripts/enable_network_magic.sh
+source /scripts/run_onboot.sh
 
 validate_userns
 fix_mount
@@ -20,7 +21,8 @@ fix_machine_id
 select_iptables
 #enable_network_magic
 
-echo "entrypoint completed: $(uname -a)"
+run_onboot
 
+echo "entrypoint completed: $(uname -a)"
 # we want the command (expected to be systemd) to be PID1, so exec to it
 exec "$@"
