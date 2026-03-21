@@ -30,7 +30,7 @@ RUN chmod +x /usr/local/bin/clean-install /usr/local/bin/entrypoint \
 RUN DEBIAN_FRONTEND=noninteractive clean-install \
       vim nano file unzip  less lz4 \
       dnsutils lsof net-tools iputils-ping \
-      openssh-server git python3  jq cron \
+      openssh-server git python3  python3-pip jq cron \
   && find /lib/systemd/system/sysinit.target.wants/ -name "systemd-tmpfiles-setup.service" -delete \
     && rm -f /lib/systemd/system/multi-user.target.wants/* \
     && rm -f /etc/systemd/system/*.wants/* \
