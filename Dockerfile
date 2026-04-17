@@ -18,7 +18,6 @@ COPY kernel/11-tcp-mtu-probing.conf /etc/sysctl.d/11-tcp-mtu-probing.conf
 COPY tools/clean-install /usr/local/bin/clean-install
 COPY tools/entrypoint /usr/local/bin/entrypoint
 COPY scripts/ /scripts
-COPY apt.d/debian.sources /etc/apt/sources.list.d/debian.sources
 
 # 同时安装大量软件包，会导致Github Action OOM，以及单个镜像层较大，分批安装
 RUN chmod +x /usr/local/bin/clean-install /usr/local/bin/entrypoint \
